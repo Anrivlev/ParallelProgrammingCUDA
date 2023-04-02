@@ -16,12 +16,10 @@ __device__ int isSuitable(int R, int G, int B)
 
 __global__ void _cuda_parallel_pixels_counting(int size, int* data, int* d_number_of_pixels)
 {
-    int globalIdx = blockIdx.x * blockDim.x + threadIdx.x;
-    for (int i = globalIdx; i < size; i+=3*B)
+    for (int i = threadIdx.x; i < size; i += 3*B)
     {
         atomicAdd(&d_number_of_pixels[blockIdx.x], isSuitable((int)data[i], (int)data[i + 1], (int)data[i + 2]));
-        // globalIdx += blockDim.x * gridDim.x;
-        __syncthreads();
+        // __syncthreads();
     }
 }
 
@@ -58,12 +56,15 @@ int main() {
     }
     // data is read
 
-    int* number_of_pixels = new int[B];
-    int* d_data;
-    int* d_number_of_pixels;
+    int *number_of_pixels = new int[B];
+    for (int i = 0; i < B; i++) { number_of_pixels[i] = 0;}
+    int *d_data;
+    int *d_number_of_pixels;
+
     cudaMalloc(&d_data, size * sizeof(int));
     cudaMalloc(&d_number_of_pixels, B * sizeof(int));
     cudaMemcpy(d_data, data, size * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_number_of_pixels, number_of_pixels, B * sizeof(int), cudaMemcpyHostToDevice);
 
     dim3 gridSize = dim3(1, 1, 1);
     dim3 blockSize = dim3(B, 1, 1);
